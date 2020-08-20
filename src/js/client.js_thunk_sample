@@ -1,7 +1,7 @@
 import { applyMiddleware, createStore } from "redux";
 import axios from "axios";
 import { createLogger } from "redux-logger";
-import promise from "redux-promise-middleware";
+import thunk from "redux-thunk";
 
 const initialState = {
   fetching: false,
@@ -12,11 +12,11 @@ const initialState = {
 
 const reducer = (state = initialState, action) => {
   switch (action.type) {
-    case "FETCH_USERS_PENDING":
+    case "FETCH_USERS_START":
       return { ...state, fetching: true };
-    case "FETCH_USERS_REJECTED":
+    case "FETCH_USERS_ERROR":
       return { ...state, fetching: false, error: action.payload };
-    case "FETCH_USERS_FULFILLED":
+    case "RECEIVE_USERS":
       return {
         ...state,
         fetching: false,
@@ -27,12 +27,16 @@ const reducer = (state = initialState, action) => {
   return state;
 };
 
-const middleware = applyMiddleware(promise, createLogger());
+const middleware = applyMiddleware(thunk, createLogger());
 const store = createStore(reducer, middleware);
 
-store.dispatch({
-  type: "FETCH_USERS",
-  payload: axios.get("http://localhost:18080")
+store.dispatch((dispatch) => {
+  dispatch({ type: "FETCH_USERS_START" });
+  axios.get("http://localhost:18080").then((response) => {
+    dispatch({ type: "RECEIVE_USERS", payload: response.data });
+  }).catch((err) => {
+    dispatch({ type: "FETCH_USERS_ERROR", payload: err });
+  });
 });
 
 // start Dummy Server By Node.js
